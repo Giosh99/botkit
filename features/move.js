@@ -3,7 +3,7 @@ const { BotkitConversation } = require("botkit");
 
 module.exports = function(controller) {
     const move = new BotkitConversation('move', controller);
-
+    console.log("creazione thread move in corso..");
     //move.addAction('move');
   //  move.addMessage('Benvenuto nella sessione MOVE {{vars.name}}','move');
   move.addAction('move');
@@ -109,6 +109,7 @@ module.exports = function(controller) {
        });
 
     controller.hears('move','message,direct_message', async(bot, message) => {
+        console.log("triggerato move");
         await bot.beginDialog('move');
     });
 }
