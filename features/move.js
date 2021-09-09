@@ -1,9 +1,11 @@
 /* esempio */
 const { BotkitConversation } = require("botkit");
-
 module.exports = function (controller) {
-    const start = new BotkitConversation('start', controller);
+
+    start = new BotkitConversation('start', controller);
+
     start.addAction('start');
+    // start.setVar('question', 'Benvenuto, di quale argomento desideri informazioni?');
     start.addQuestion({
         text: 'Benvenuto, di quale argomento desideri informazioni?',
         type: 'question',
@@ -30,6 +32,7 @@ module.exports = function (controller) {
                 pattern: 'move',
                 type: 'string',
                 handler: async (response_text, controller, bot) => {
+                    //controller.setVar('Argomento', 'move');
                     controller.gotoThread('move');
                 }
             },
@@ -47,6 +50,14 @@ module.exports = function (controller) {
                 handler: async (response_text, controller, bot) => {
                     try { return await bot.say('Opzione ancora da implementare!'); }
                     catch (error) { console.error(error); }
+                }
+            },
+            // pattern triggerato quando viene mandata una richiesta di chiusura conversazione anticipara rispetto al flow normale
+            {
+                pattern: 'finish',
+                type: 'string',
+                handles: async (response_text, controller, bot) => {
+                    controller.addAction('complete');
                 }
             }
         ]
@@ -79,6 +90,7 @@ module.exports = function (controller) {
                 pattern: 'show_video',
                 type: 'string',
                 handler: async (response_text, controller, bot) => {
+                    controller.setVar('Argomento', 'move');
                     controller.gotoThread('watch_video');
                 }
             },
@@ -94,6 +106,15 @@ module.exports = function (controller) {
                 type: 'string',
                 handler: async (response_text, controller, bot) => {
                     controller.gotoThread('upload_video');
+                }
+            }
+            ,
+            // pattern triggerato quando viene mandata una richiesta di chiusura conversazione anticipara rispetto al flow normale
+            {
+                pattern: 'finish',
+                type: 'string',
+                handles: async (response_text, controller, bot) => {
+                    controller.addAction('complete');
                 }
             }
         ]
@@ -155,36 +176,45 @@ module.exports = function (controller) {
                 });
             }
         }
+        ,
+        // pattern triggerato quando viene mandata una richiesta di chiusura conversazione anticipara rispetto al flow normale
+            {
+                pattern: 'finish',
+                type: 'string',
+                handles: async (response_text, controller, bot) => {
+                    controller.addAction('complete');
+                }
+            }
     ], { key: 'request_video_choice' }, 'watch_video');
     // thread text_message
     start.addAction('upload_text');
     start.addQuestion({
         text: 'Invia un messaggio al tuo coach!',
-        type: 'upload_text'
+        type: 'keyboard_activation'
     },
         async (response, convo, bot, full_message) => {
-            if (full_message.type == 'upload_text')
-                await bot.say(
-                    [
-                        {
-                            text: 'Messaggio ricevuto! Il tuo coach ti risponderà a breve',
-                            type: 'media_deactivation'
-                        },
-                        {
-                            text: 'yep',
-                            type: 'fulfillment'
-                        }
-                    ]
+            // controllo che il messaggio arrivato sia di tipo testo
+            if (full_message.content_type == 'text')
+                await bot.say({
+                    text: 'Messaggio ricevuto! Il tuo coach ti risponderà a breve',
+                    type: 'fulfillment'
+                }
                 );
+                // controllo che il messaggio arrivato sia un messaggio di chiusura conversazione
+            else if(full_message.content_type == 'finish') {
+                convo.addAction('complete');
+            }
+            // se non è nessuno dei precedenti allora richiedo l'invio del messaggio
             else {
                 await bot.say({
                     text: 'Il messaggio ricevuto non è del tipo aspettato, riprova!',
-                    type: 'text_activation'
+                    type: 'keyboard_activation'
                 });
                 convo.gotoThread('upload_text');
             }
-        }
+        }, { key: 'upload_text' }, 'upload_text'
     );
+    start.addAction('complete');
     // thread upload_video
     start.addAction("upload_video");
     start.addQuestion({
@@ -192,19 +222,17 @@ module.exports = function (controller) {
         type: 'media_activation'
     },
         async (response, convo, bot, full_message) => {
-            if (full_message.type == 'video') {
-                await bot.say([
+            if (full_message.content_type == 'video') {
+                await bot.say(
                     {
                         text: 'Video ricevuto! Il tuo coach ti risponderà al più presto',
-                        type: 'media_deactivation'
-                    },
-                    {
-                        // ricostruiamo il dialogo bot-client da spedire al coach
-                        text: "yep",
-                        type: "fulfillment"
+                        type: 'fulfillment'
                     }
-                ]
                 );
+            }
+            // controllo che il messaggio arrivato sia un messaggio di chiusura conversazione
+            else if(full_message.content_type == 'finish') {
+                convo.addAction('complete');
             }
             else {
                 await bot.say({

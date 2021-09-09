@@ -47,13 +47,17 @@ controller.ready(() => {
 
     /* catch-all that uses the CMS to trigger dialogs */
     if (controller.plugins.cms) {
-        controller.on('message,direct_message,video,image', async (bot, message) => {
+        controller.on('message,direct_message', async (bot, message) => {
             let results = false;
             results = await controller.plugins.cms.testTrigger(bot, message);
             if (results !== false) {
                 // do not continue middleware!
                 return false;
             }
+        });
+        controller.on('end', function(convo) {
+            let res = convo.extractResponses();
+            console.log(res);
         });
         controller.on('receive_error', function(err, bot, message, pipeline_stage) {
             bot.reply(message, `There was an error processing your request. Please try again later. Error: ${err.toString()}`);

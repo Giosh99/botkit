@@ -7,7 +7,6 @@ const { BotkitConversation } = require("botkit");
 module.exports = function(controller) {
 
     let typing = new BotkitConversation('typing', controller);
-
     typing.say('I am going to type for a while now...');
     typing.addAction('typing');
 
